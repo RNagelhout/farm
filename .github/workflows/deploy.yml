@@ -1,0 +1,41 @@
+name: Deploy Productions
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  run-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+
+        uses: actions/checkout@v3
+
+      - name: Setup Python 3.11
+        uses: actions/setup-python@v3
+        with:
+          python-version: "3.11.0"
+
+      - name: Install Dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run tests
+        run: pytest
+
+      - name: Deploy to droplet
+        if: success()
+        uses: appleboy/ssh-action@v0.1.2
+        with:
+          host: ${{ fromJSON(toJSON(secrets)).SSH_HOST }}
+          key: ${{ fromJSON(toJSON(secrets)).SSH_KEY }}
+          username: ${{ fromJSON(toJSON(secrets)).SSH_USER }}
+
+          script: |
+            cd /home/farm
+            git remote -v
+            git add .
+            git clone main
+            git status
+            systemctl restart farm
